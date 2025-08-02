@@ -1,25 +1,22 @@
+import os
 import logging
 import datetime
-import os
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-)
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from collections import deque
 import asyncio
+from collections import deque
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# پیکربندی لاگ
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# دریافت توکن از محیط (در Render یا Replit ست کن)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))
 ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 
 question_queue = deque(maxlen=MAX_QUESTIONS)
+
+# لاگ‌ها
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! ربات زجاج کلاب فعال است.")
@@ -79,7 +76,7 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.start()
 
-    logger.info("🤖 ربات فعال است...")
+    logging.info("🤖 ربات فعال است...")
     await app.run_polling()
 
 if __name__ == "__main__":
@@ -87,7 +84,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except RuntimeError as e:
         if "event loop is already running" in str(e):
-            logger.warning("🔁 event loop already running – switching to create_task mode")
             loop = asyncio.get_event_loop()
             loop.create_task(main())
             loop.run_forever()
