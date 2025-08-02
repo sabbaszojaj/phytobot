@@ -1,26 +1,31 @@
-import os
 import logging
 import datetime
-import asyncio
-from collections import deque
+import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+)
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from collections import deque
+import asyncio
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))
-ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
+# پیکربندی لاگ‌ها
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# متغیرهای محیطی
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+GROUP_ID = int(os.environ.get("GROUP_ID", "-1001700701292"))
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 
 question_queue = deque(maxlen=MAX_QUESTIONS)
 
-# لاگ‌ها
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+# دستور /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! ربات زجاج کلاب فعال است.")
 
+# دریافت سوال متنی در گروه
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if message.chat.type in ["group", "supergroup"] and message.reply_to_message is None:
@@ -33,8 +38,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "text": text,
             "date": datetime.datetime.now()
         })
-        logger.info(f"❓ سؤال ذخیره شد از {username}: {text}")
+        logger.info(f"❓ سوال ذخیره شد از {username}: {text}")
 
+# دریافت پاسخ صوتی در ریپلای
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message.reply_to_message:
@@ -44,6 +50,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_combined_message(context, q, message.voice.file_id)
             break
 
+# ارسال پست ترکیبی
 async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, voice_file_id):
     date_str = question["date"].strftime("%Y/%m/%d")
     username = question["username"]
@@ -61,10 +68,12 @@ async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, vo
         caption=caption
     )
 
+# استخراج هشتگ از متن
 def extract_hashtags(text):
     words = text.lower().split()
     return [f"#{w}" for w in words if len(w) > 3][:5]
 
+# تابع اصلی
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     await app.bot.delete_webhook(drop_pending_updates=True)
@@ -76,14 +85,16 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.start()
 
-    logging.info("🤖 ربات فعال است...")
+    logger.info("🤖 ربات فعال است...")
     await app.run_polling()
 
+# اجرای ایمن
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except RuntimeError as e:
         if "event loop is already running" in str(e):
+            logger.warning("🔁 event loop already running – switching to create_task mode")
             loop = asyncio.get_event_loop()
             loop.create_task(main())
             loop.run_forever()
