@@ -13,19 +13,17 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# پیکربندی متغیرها از محیط (برای امنیت در Render)
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # 🔒 مقدار را در داشبورد Render تنظیم کن
-GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))  # آیدی گروه را در محیط تعریف کن
+# دریافت توکن از محیط (در Render یا Replit ست کن)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))
 ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 
 question_queue = deque(maxlen=MAX_QUESTIONS)
 
-# دستور استارت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! ربات زجاج کلاب فعال است.")
 
-# ذخیره سوال
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if message.chat.type in ["group", "supergroup"] and message.reply_to_message is None:
@@ -40,7 +38,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         })
         logger.info(f"❓ سؤال ذخیره شد از {username}: {text}")
 
-# دریافت پاسخ صوتی
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message.reply_to_message:
@@ -50,7 +47,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_combined_message(context, q, message.voice.file_id)
             break
 
-# ارسال پیام ترکیبی
 async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, voice_file_id):
     date_str = question["date"].strftime("%Y/%m/%d")
     username = question["username"]
@@ -68,12 +64,10 @@ async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, vo
         caption=caption
     )
 
-# استخراج هشتگ
 def extract_hashtags(text):
     words = text.lower().split()
     return [f"#{w}" for w in words if len(w) > 3][:5]
 
-# اجرای اصلی
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     await app.bot.delete_webhook(drop_pending_updates=True)
@@ -88,7 +82,6 @@ async def main():
     logger.info("🤖 ربات فعال است...")
     await app.run_polling()
 
-# اجرای ایمن
 if __name__ == "__main__":
     try:
         asyncio.run(main())
