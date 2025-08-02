@@ -1,5 +1,6 @@
 import logging
 import datetime
+import os
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
@@ -7,26 +8,24 @@ from telegram.ext import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from collections import deque
 import asyncio
-from keep_alive import keep_alive
 
-# تنظیمات لاگ
+# پیکربندی لاگ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# اطلاعات ربات
-BOT_TOKEN = "8164080169:AAFCjuvK21PVtIs14qofC4Xw7Kw4SR9RqUc"
-GROUP_ID = -1001700701292  # آیدی گروه شما
-ADMIN_ID = 328462927       # آیدی عددی مدیر
+# پیکربندی متغیرها از محیط (برای امنیت در Render)
+BOT_TOKEN = os.getenv("8164080169:AAFCjuvK21PVtIs14qofC4Xw7Kw4SR9RqUc")  # 🔒 مقدار را در داشبورد Render تنظیم کن
+GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))  # آیدی گروه را در محیط تعریف کن
+ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 
-# صف سوالات
 question_queue = deque(maxlen=MAX_QUESTIONS)
 
-# استارت
+# دستور استارت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! ربات زجاج کلاب فعال است.")
 
-# ذخیره سوالات متنی
+# ذخیره سوال
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if message.chat.type in ["group", "supergroup"] and message.reply_to_message is None:
@@ -41,7 +40,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         })
         logger.info(f"❓ سؤال ذخیره شد از {username}: {text}")
 
-# پاسخ صوتی در ریپلای به سوال
+# دریافت پاسخ صوتی
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message.reply_to_message:
@@ -51,7 +50,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_combined_message(context, q, message.voice.file_id)
             break
 
-# ارسال ترکیبی سوال و پاسخ
+# ارسال پیام ترکیبی
 async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, voice_file_id):
     date_str = question["date"].strftime("%Y/%m/%d")
     username = question["username"]
@@ -69,14 +68,13 @@ async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, vo
         caption=caption
     )
 
-# استخراج هشتگ از متن
+# استخراج هشتگ
 def extract_hashtags(text):
     words = text.lower().split()
     return [f"#{w}" for w in words if len(w) > 3][:5]
 
 # اجرای اصلی
 async def main():
-    keep_alive()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     await app.bot.delete_webhook(drop_pending_updates=True)
 
@@ -88,12 +86,9 @@ async def main():
     scheduler.start()
 
     logger.info("🤖 ربات فعال است...")
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    await asyncio.Event().wait()
+    await app.run_polling()
 
-# اجرای ایمن در Replit
+# اجرای ایمن
 if __name__ == "__main__":
     try:
         asyncio.run(main())
