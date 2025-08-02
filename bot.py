@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # پیکربندی متغیرها از محیط (برای امنیت در Render)
-BOT_TOKEN = os.getenv("8164080169:AAFCjuvK21PVtIs14qofC4Xw7Kw4SR9RqUc")  # 🔒 مقدار را در داشبورد Render تنظیم کن
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # 🔒 مقدار را در داشبورد Render تنظیم کن
 GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))  # آیدی گروه را در محیط تعریف کن
 ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
