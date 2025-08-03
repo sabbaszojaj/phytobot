@@ -1,28 +1,24 @@
 import logging
 import datetime
 import os
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from collections import deque
-import asyncio
 
-# لاگ
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# متغیرهای محیطی
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_ID = int(os.getenv("GROUP_ID", "-1001234567890"))
 ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 question_queue = deque(maxlen=MAX_QUESTIONS)
 
-# استارت
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! ربات دارویی فعال است.")
 
-# ذخیره سوالات
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if message.chat.type in ["group", "supergroup"] and message.reply_to_message is None:
@@ -35,9 +31,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "text": text,
             "date": datetime.datetime.now()
         })
-        logger.info(f"❓ سوال ذخیره شد از {username}: {text}")
 
-# دریافت ویس و ترکیب با سوال
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message.reply_to_message:
@@ -47,7 +41,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_combined_message(context, q, message.voice.file_id)
             break
 
-# ترکیب پیام
 async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, voice_file_id):
     date_str = question["date"].strftime("%Y/%m/%d")
     username = question["username"]
@@ -69,7 +62,6 @@ def extract_hashtags(text):
     words = text.lower().split()
     return [f"#{w}" for w in words if len(w) > 3][:5]
 
-# main
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     await app.bot.delete_webhook(drop_pending_updates=True)
@@ -81,7 +73,7 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.start()
 
-    logger.info("🤖 ربات فعال است...")
+    logging.info("🤖 ربات فعال است...")
     await app.run_polling()
 
 if __name__ == "__main__":
