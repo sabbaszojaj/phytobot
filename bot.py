@@ -1,31 +1,28 @@
 import logging
 import datetime
 import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from collections import deque
 import asyncio
 
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-)
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-# تنظیم لاگ
+# لاگ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # متغیرهای محیطی
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # در داشبورد Render تنظیم شود
-GROUP_ID = int(os.getenv("GROUP_ID", "-1001700701292"))
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GROUP_ID = int(os.getenv("GROUP_ID", "-1001234567890"))
 ADMIN_ID = int(os.getenv("ADMIN_ID", "328462927"))
 MAX_QUESTIONS = 100
 question_queue = deque(maxlen=MAX_QUESTIONS)
 
 # استارت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("سلام! ربات زجاج کلاب فعال است.")
+    await update.message.reply_text("سلام! ربات دارویی فعال است.")
 
-# ذخیره سؤال
+# ذخیره سوالات
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if message.chat.type in ["group", "supergroup"] and message.reply_to_message is None:
@@ -38,9 +35,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "text": text,
             "date": datetime.datetime.now()
         })
-        logger.info(f"❓ سؤال ذخیره شد از {username}: {text}")
+        logger.info(f"❓ سوال ذخیره شد از {username}: {text}")
 
-# پاسخ صوتی
+# دریافت ویس و ترکیب با سوال
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message.reply_to_message:
@@ -50,7 +47,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_combined_message(context, q, message.voice.file_id)
             break
 
-# ارسال پیام ترکیبی
+# ترکیب پیام
 async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, voice_file_id):
     date_str = question["date"].strftime("%Y/%m/%d")
     username = question["username"]
@@ -68,15 +65,13 @@ async def send_combined_message(context: ContextTypes.DEFAULT_TYPE, question, vo
         caption=caption
     )
 
-# هشتگ‌ها
 def extract_hashtags(text):
     words = text.lower().split()
     return [f"#{w}" for w in words if len(w) > 3][:5]
 
-# اجرای اصلی
+# main
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
     await app.bot.delete_webhook(drop_pending_updates=True)
 
     app.add_handler(CommandHandler("start", start))
@@ -89,13 +84,11 @@ async def main():
     logger.info("🤖 ربات فعال است...")
     await app.run_polling()
 
-# اجرای ایمن
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except RuntimeError as e:
         if "event loop is already running" in str(e):
-            logger.warning("🔁 event loop already running – switching to create_task mode")
             loop = asyncio.get_event_loop()
             loop.create_task(main())
             loop.run_forever()
